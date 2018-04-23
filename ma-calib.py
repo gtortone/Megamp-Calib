@@ -84,15 +84,13 @@ class Monitoring(admin.BaseView):
 
    @admin.expose('/', methods=['GET', 'POST'])      
    def index(self):
-      # handle errors !!!
-      pv = PV('MEGAMP:MOD:SEL')
+      pv = PV('MEGAMP:MOD:SEL', connection_timeout=2)
       _modlist = pv.enum_strs
-      print(_modlist)
 
       if tq.getStatus() == 1:
             flash('Megamp Calibration monitoring page not available - please STOP calibration queue', 'danger')
-      #elif not _modlist:
-      #      flash('Megamp EPICS IOC not running or modules not detected - please verify IOC configuration', 'danger')
+      elif not _modlist:
+            flash('Megamp EPICS IOC not running or modules not detected - please verify IOC configuration', 'danger')
       return self.render('monitoring.html', rcs=tq.getStatus(), modlist=_modlist)
 
 class TaskQueue():
