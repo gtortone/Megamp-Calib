@@ -1,0 +1,22 @@
+{% extends 'admin/master.html' %}
+{% block body %}
+<h4>Current calibration queue status: 
+   {% if rcs == 1 %}
+      RUNNING
+   {% else %}
+      STOPPED
+   {% endif %}
+</h4>
+<br></br>
+<form method="GET" action="/runcontrol">
+   <button type="submit" class="btn btn-primary" name="cmd" value="start">
+         <span class="glyphicon glyphicon-play"></span> START calibration </button>
+   <button type="submit" class="btn btn-danger" name="cmd" value="stop">
+         <span class="glyphicon glyphicon-stop"></span> STOP calibration</button>
+</form>
+<br>
+{% if rcs == 1 %}
+   ((display calibration parameters and plot))
+{% endif %}
+
+{% endblock %}
