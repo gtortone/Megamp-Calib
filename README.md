@@ -23,6 +23,7 @@ source venv/bin/activate
 - install Flask and required packages
 
 ```
+pip install pyusb
 pip install flask 
 pip install flask-admin
 pip install flask-wtf
@@ -31,6 +32,10 @@ pip install pyepics
 pip install flask-SQLalchemy
 pip install SQLalchemy
 ```
+
+- set PyEpics environment variable
+
+export PYEPICS_LIBCA=/opt/epics/base/lib/linux-arm/libca.so
 
 Run
 ---

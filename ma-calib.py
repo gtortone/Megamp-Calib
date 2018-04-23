@@ -6,6 +6,9 @@ import enum
 import threading, time
 import json
 
+# internal libs
+from libs import cypress
+
 # FLASK
 from flask import Flask, request, flash, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
@@ -18,7 +21,7 @@ from sqlalchemy.event import listens_for
 from sqlalchemy import event
 
 # ROOT
-from ROOT import gROOT, TCanvas, TH1I, TString, TBufferJSON
+#from ROOT import gROOT, TCanvas, TH1I, TString, TBufferJSON
 from random import random
 
 # EPICS
@@ -29,7 +32,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = hexlify(urandom(24))
 app.config['DATABASE_FILE'] = 'tq_calib.sqlite'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + app.config['DATABASE_FILE']
-app.config['SQLALCHEMY_ECHO'] = True
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 modselPV = PV('MEGAMP:MOD:SEL')
 
@@ -178,4 +181,5 @@ if not op.exists(database_path):
 
 tq = TaskQueue()
 
-app.run()
+if __name__ == "__main__":
+   app.run()
