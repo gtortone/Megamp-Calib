@@ -1,9 +1,10 @@
 # SYSTEM
 import os.path as op
+import threading, time
 from binascii import hexlify
 from os import urandom
+from random import random
 import enum
-import threading, time
 import json
 
 # internal libs
@@ -21,8 +22,7 @@ from sqlalchemy.event import listens_for
 from sqlalchemy import event
 
 # ROOT
-#from ROOT import gROOT, TCanvas, TH1I, TString, TBufferJSON
-from random import random
+# from ROOT import gROOT, TCanvas, TH1I, TString, TBufferJSON
 
 # EPICS
 from epics import PV
@@ -34,7 +34,7 @@ app.config['DATABASE_FILE'] = 'tq_calib.sqlite'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + app.config['DATABASE_FILE']
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-modselPV = PV('MEGAMP:MOD:SEL')
+pvdb = {}
 
 class task_status(enum.Enum):
       Pending = 1
@@ -90,10 +90,11 @@ class Monitoring(admin.BaseView):
       pv = PV('MEGAMP:MOD:SEL', connection_timeout=2)
       _modlist = pv.enum_strs
 
-      if tq.getStatus() == 1:
-            flash('Megamp Calibration monitoring page not available - please STOP calibration queue', 'danger')
-      elif not _modlist:
-            flash('Megamp EPICS IOC not running or modules not detected - please verify IOC configuration', 'danger')
+      if not _modlist:
+      	flash('Megamp EPICS IOC not running or modules not detected - please verify IOC configuration', 'danger')
+      elif tq.getStatus() == 1:
+      	flash('Megamp Calibration monitoring page not available - please STOP calibration queue', 'danger')
+
       return self.render('monitoring.html', rcs=tq.getStatus(), modlist=_modlist)
 
 class TaskQueue():
@@ -117,7 +118,7 @@ class TaskQueue():
    def run(self, tq):
       while True:
          if tq.getStatus() == 0:
-            print('<thread sleep...>')
+            #print('<thread sleep...>')
             time.sleep(1)
          if tq.getStatus() == 1:
             print("Starting calibration tasks...")
@@ -148,23 +149,76 @@ class TaskQueue():
 
 # MAIN
 
+def onChangesPV(pvname=None, value=None, char_value=None, **kw):
+	pvdb[pvname] = value
+
 @app.route('/hist/<module>/<channel>')
 def hist(module, channel):
+	if not hasattr(hist, "fChannel"):
+		hist.fChannel = -1 
+	if not hasattr(hist, "fModule"):
+		hist.fModule = -1
+	
+	if module != hist.fModule or channel != hist.fChannel:
+		pvname = get_pvname(module, channel, 'CFD')
+		pv = PV(pvname, connection_timeout=2)
+		pv.value = 0	# enable CFD threshold (disable = false)
+
+		pvname = get_pvname(module, channel, 'CFDThreshold')
+		hist.pvcfdthr = PV(pvname, connection_timeout=2)
+		pvdb[pvname] = hist.pvcfdthr.value
+		hist.pvcfdthr.add_callback(onChangesPV)
+
+		hist.fModule = module
+		hist.fChannel = channel
+
 	title = 'Megamp Module #' + str(module) + " - Channel #" + str(channel)
 	plot = TH1I('plot', title, 100, -4, 4)
-	#plot.SetFillColor(48)
 	for i in range(25000):
-   	# Generate random values
 		px = random() 
-   	# Fill histograms
 		plot.Fill(px)
+
 	jsonhist = TBufferJSON.ConvertToJSON(plot)
 	objarr = {}
 	objarr["plot"] = json.loads(str(jsonhist))
-	objarr["a"] = 1
-	objarr["b"] = 100
+	objarr["cfdthreshold"] = pvdb[get_pvname(module, channel, 'CFDThreshold')]
 
 	return(json.dumps(objarr))
+
+@app.route('/ma/<module>/<channel>')
+def ma(module, channel):
+	if not hasattr(ma, "fChannel"):
+		ma.fChannel = -1 
+	if not hasattr(ma, "fModule"):
+		ma.fModule = -1
+
+	if module != ma.fModule or channel != ma.fChannel:
+		pvname = get_pvname(module, channel, 'CFD')
+		pv = PV(pvname, connection_timeout=2)
+		pv.value = 0	# enable CFD threshold (disable = false)
+
+		pvname = get_pvname(module, channel, 'CFDThreshold')
+		ma.pvcfdthr = PV(pvname, connection_timeout=2)
+		pvdb[pvname] = ma.pvcfdthr.value
+		ma.pvcfdthr.add_callback(onChangesPV)
+
+		ma.fModule = module
+		ma.fChannel = channel
+	
+	jsobj = {}
+	jsobj["hvalues"] = []
+	jsobj["htitle"] = 'Megamp Module #' + str(module) + " - Channel #" + str(channel)
+
+	for _ in range(18000):
+		jsobj["hvalues"].append(random()*4096)
+
+	jsobj["cfdthreshold"] = pvdb[get_pvname(module, channel, 'CFDThreshold')]
+
+	return(json.dumps(jsobj))
+
+def get_pvname(module, channel, attribute):
+	pvname = 'MEGAMP:M' + str(module) + ':C' + str(channel) + ':' + str(attribute)
+	return(pvname)
 
 admin = admin.Admin(app, url='/', name='EXOTIC Megamp Calibration', template_mode='bootstrap3')
 admin.add_view(TaskView(Task, db.session, name='Tasks', url='/tasks'))

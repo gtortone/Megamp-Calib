@@ -17,7 +17,6 @@ function plotHistogramJSROOT(divName, url) {
     JSROOT.draw(divName, histo, "hist");
 
     xhrAlreadyInFligthJSROOT = false;
-  
   });
 
 }
