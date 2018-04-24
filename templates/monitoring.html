@@ -61,22 +61,28 @@
 	}
 
 	function do_refresh() {
-		gURL = "http://localhost:5000/ma/" + gModule + "/" + gChannel;
+		gURL = "http://lxconga01.na.infn.it:5000/ma/" + gModule + "/" + gChannel;
 		getUrl(gURL, undefined).then(function(response) {
 			gJSONdata = JSON.parse(response);
+			ROOTplot();
+			updatePVs();
 		});
-
-		ROOTplot();
-		updatePVs();
 	}
+
+        function reset_histogram() {
+        	url = "http://lxconga01.na.infn.it:5000/ma/hreset"
+                getUrl(url, undefined).then(function(response) {
+                	do_refresh();
+	        });
+        }
 
 	function ROOTplot() {
 		if (gIsPaused) {
 			return;
 		}
-		histo = JSROOT.CreateTH1(25000);
+		histo = JSROOT.CreateTH1(17000);
 		for (var i=0; i<gJSONdata.hvalues.length; i++) {
-	   	histo.setBinContent(i, gJSONdata.hvalues[i]);
+	   	   histo.setBinContent(i, gJSONdata.hvalues[i]);
 		}
 		histo.fTitle = gJSONdata["htitle"];
 		JSROOT.redraw('graphdiv', histo, "");
@@ -103,7 +109,7 @@
 					</div>
 					<!-- end well -->
 					<div class="well well-sm">
-						<button type="button" class="btn btn-primary" id="reset_button">
+						<button type="button" class="btn btn-primary" id="reset_button" onclick="reset_histogram();">
 							<span class="glyphicon glyphicon-refresh"> Reset histogram</span>
 						</button>
 					</div>

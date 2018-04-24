@@ -8,7 +8,7 @@ import enum
 import json
 
 # internal libs
-from libs import cypress
+from libs.cypress import Cypress, CypressError
 
 # FLASK
 from flask import Flask, request, flash, redirect, url_for
@@ -20,9 +20,6 @@ from flask_admin.actions import action
 from flask_admin.model.template import EndpointLinkRowAction, LinkRowAction
 from sqlalchemy.event import listens_for
 from sqlalchemy import event
-
-# ROOT
-# from ROOT import gROOT, TCanvas, TH1I, TString, TBufferJSON
 
 # EPICS
 from epics import PV
@@ -152,39 +149,6 @@ class TaskQueue():
 def onChangesPV(pvname=None, value=None, char_value=None, **kw):
 	pvdb[pvname] = value
 
-@app.route('/hist/<module>/<channel>')
-def hist(module, channel):
-	if not hasattr(hist, "fChannel"):
-		hist.fChannel = -1 
-	if not hasattr(hist, "fModule"):
-		hist.fModule = -1
-	
-	if module != hist.fModule or channel != hist.fChannel:
-		pvname = get_pvname(module, channel, 'CFD')
-		pv = PV(pvname, connection_timeout=2)
-		pv.value = 0	# enable CFD threshold (disable = false)
-
-		pvname = get_pvname(module, channel, 'CFDThreshold')
-		hist.pvcfdthr = PV(pvname, connection_timeout=2)
-		pvdb[pvname] = hist.pvcfdthr.value
-		hist.pvcfdthr.add_callback(onChangesPV)
-
-		hist.fModule = module
-		hist.fChannel = channel
-
-	title = 'Megamp Module #' + str(module) + " - Channel #" + str(channel)
-	plot = TH1I('plot', title, 100, -4, 4)
-	for i in range(25000):
-		px = random() 
-		plot.Fill(px)
-
-	jsonhist = TBufferJSON.ConvertToJSON(plot)
-	objarr = {}
-	objarr["plot"] = json.loads(str(jsonhist))
-	objarr["cfdthreshold"] = pvdb[get_pvname(module, channel, 'CFDThreshold')]
-
-	return(json.dumps(objarr))
-
 @app.route('/ma/<module>/<channel>')
 def ma(module, channel):
 	if not hasattr(ma, "fChannel"):
@@ -209,12 +173,22 @@ def ma(module, channel):
 	jsobj["hvalues"] = []
 	jsobj["htitle"] = 'Megamp Module #' + str(module) + " - Channel #" + str(channel)
 
-	for _ in range(18000):
-		jsobj["hvalues"].append(random()*4096)
+	cy.writemem(0, 7)	 # enable histogram
+	cy.writemem(2, 1)	 # generate histogram
+
+	hist = cy.readhist()
+
+	for item in hist:
+	   jsobj["hvalues"].append(item)
 
 	jsobj["cfdthreshold"] = pvdb[get_pvname(module, channel, 'CFDThreshold')]
 
 	return(json.dumps(jsobj))
+
+@app.route('/ma/hreset')
+def hreset():
+	cy.writemem(1, 1)	# reset current histogram
+	return "OK"
 
 def get_pvname(module, channel, attribute):
 	pvname = 'MEGAMP:M' + str(module) + ':C' + str(channel) + ':' + str(attribute)
@@ -234,6 +208,10 @@ if not op.exists(database_path):
    db.session.commit()
 
 tq = TaskQueue()
+
+cy = Cypress()
+cy.open(0)
+cy.busclear()
 
 if __name__ == "__main__":
    app.run()

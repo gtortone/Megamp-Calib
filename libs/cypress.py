@@ -4,6 +4,7 @@ import usb.util
 from array import array
 from random import randint
 import struct
+import sys
 
 class CypressError(Exception):
     """Base class for other exceptions"""
@@ -127,13 +128,23 @@ class Cypress():
     def readhist(self):
         rdhist8 = array('B')
         # read histogram
-        try:
-           rdhist8 = self.dev.read(self.ep_data, 1024, timeout=100)
-        except Exception as e:
-           #print(e)
-           raise CypressReadResponseError("Cypress error receiving histogram data: " + str(e))
+        while True:
+           try:
+              chunk = self.dev.read(self.ep_data, 1024, timeout=100)
+           except Exception as e:
+              #print(e)
+              #raise CypressReadResponseError("Cypress error receiving histogram data: " + str(e))	
+              break;
+           else:
+              rdhist8.extend(chunk)
 
         count = len(rdhist8) // 2
         rdhist16 = struct.unpack('H'*count, rdhist8)
 
-        return(rdhist16)
+        # delete element '32768'
+        hist = array('H')
+        for item in rdhist16:
+           if item != 32768:
+              hist.append(item)
+
+        return(hist[:-9])
