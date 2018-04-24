@@ -35,7 +35,16 @@ pip install SQLalchemy
 
 - set PyEpics environment variable
 
+```
 export PYEPICS_LIBCA=/opt/epics/base/lib/linux-arm/libca.so
+```
+
+- clone JSRoot GIT repository
+
+```
+cd static
+git clone https://github.com/root-project/jsroot.git
+```
 
 Run
 ---
