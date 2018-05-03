@@ -281,23 +281,26 @@ def hdata():
 			return(json.dumps(jsobj))
 
 		try:
-			hist, dead_time, time_meas, num_event, idle_time = cy.readhist()
+			hist, gated_time, phys_time, num_events = cy.readhist()
 		except Exception as e:
 			jsobj["MA_ERROR"] = "USB write error (read histogram)"
 			return(json.dumps(jsobj))
 	else:
 		hist = range(200)
-		dead_time = time_meas = num_event = idle_time = 0
+		gated_time = phys_time = num_events = 0
 
 	jsobj["H_TITLE"] = 'Megamp Module #{} - Channel #{}'.format(ms.getModule(),ms.getChannel())
 	jsobj["H_VALUES"] = []
 	for item in hist:
 		jsobj["H_VALUES"].append(item)
 
-	jsobj["H_DTIME"] = int(dead_time)
-	jsobj["H_TIME"] = int(time_meas)
-	jsobj["H_EVENTS"] = num_event
-	jsobj["H_ITIME"] = int(idle_time)
+	jsobj["H_GTIME"] = int(gated_time)
+	jsobj["H_PTIME"] = int(phys_time)
+	if(phys_time > 0):
+		jsobj["H_DTIME"] = round(100 - ((int(phys_time) - int(gated_time)) / int(phys_time)) * 100, 2)
+	else:
+		jsobj["H_DTIME"] = "-"
+	jsobj["H_EVENTS"] = num_events
 
 	return(json.dumps(jsobj))
 

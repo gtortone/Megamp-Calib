@@ -142,10 +142,9 @@ class Cypress():
 		rdhist16 = struct.unpack('H'*count, rdhist8)
 
 		# values with resolution = 10ns	
-		dead_time = (rdhist16[-9] + (rdhist16[-8] << 16) + (rdhist16[-7] << 32)) * 10e-8
-		time_meas = (rdhist16[-6] + (rdhist16[-5] << 16) + (rdhist16[-4] << 32)) * 10e-8
-		num_event = rdhist16[-3] + (rdhist16[-2] << 16)
-		idle_time = rdhist16[-1]
+		gated_time = (rdhist16[-9] + (rdhist16[-8] << 16) + (rdhist16[-7] << 32)) * 10e-8
+		phys_time = (rdhist16[-6] + (rdhist16[-5] << 16) + (rdhist16[-4] << 32)) * 10e-9		## !!! verify !!!
+		num_events = rdhist16[-3] + (rdhist16[-2] << 16)
 
 		# delete element '32768'
 		hist = array('H')
@@ -153,4 +152,4 @@ class Cypress():
 			if item != 32768:
 				hist.append(item)
 
-		return(hist[:-9], dead_time, time_meas, num_event, idle_time)
+		return(hist[:-9], gated_time, phys_time, num_events)
