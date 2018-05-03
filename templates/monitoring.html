@@ -1,9 +1,15 @@
-{% extends 'admin/master.html' %} {% block head %} {{ super() }}
+{% extends 'admin/master.html' %} {% block head_css %} {{ super() }}
+<link href="/static/css/toastr.min.css" rel="stylesheet" /> 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+{% endblock %} {% block head %} {{ super() }}
 <script src="/static/jsroot/scripts/d3.min.js"></script>
 <script src="/static/jsroot/scripts/JSRootCore.js"></script>
 <script src="/static/jsroot/scripts/JSRootPainter.js"></script>
 <script src="/static/jsroot/scripts/JSRootPainter.more.js"></script>
-<script src="/static/js/rootana_functions.js" type="text/javascript"></script> {% endblock head %} {% with messages = get_flashed_messages() %} {% if messages %}
+<script src="/static/js/rootana_functions.js" type="text/javascript"></script>
+<script src="/static/js/jquery.min.js" type="text/javascript"></script>
+<script src="/static/js/toastr.min.js" type="text/javascript"></script>
+{% endblock head %} {% with messages = get_flashed_messages() %} {% if messages %}
 <ul class='flashes'>
 	{% for message in messages %}
 	<li>{{ message }}</li>{% endfor %}
@@ -15,14 +21,13 @@
 	gChannel = 0;
 	gRefresh = 5;
 	gIntervalID = 0;
-	gJSONdata = undefined
-	gURL = undefined
 
 	window.addEventListener("load", init);
 
 	function init() {
+		set_machannel(gModule, gChannel);
 		do_refresh();
-		gIntervalID = setInterval(ROOTplot, gRefresh * 1000);
+		gIntervalID = setInterval(do_refresh, gRefresh * 1000);
 	}
 
 	function pause_resume() {
@@ -30,10 +35,12 @@
 			gIsPaused = false;
 			$('#pause_button span:last-child').text(" Pause");
 			document.getElementById("icon01").classList.replace("glyphicon-play", "glyphicon-pause");
+			document.getElementById("spinner").classList.replace("fa-spin-pause", "fa-spin");
 		} else {
 			gIsPaused = true;
 			$('#pause_button span:last-child').text(" Resume");
 			document.getElementById("icon01").classList.replace("glyphicon-pause", "glyphicon-play");
+			document.getElementById("spinner").classList.replace("fa-spin", "fa-spin-pause");
 		}
 	}
 
@@ -47,7 +54,8 @@
 
 		document.getElementById("module").innerHTML = gModule;
 		document.getElementById("channel").innerHTML = gChannel;
-		
+
+		set_machannel(gModule, gChannel);
 		do_refresh();
 	}
 
@@ -60,36 +68,75 @@
 		gIntervalID = setInterval(do_refresh, gRefresh * 1000);
 	}
 
-	function do_refresh() {
-		gURL = "http://lxconga01.na.infn.it:5000/ma/" + gModule + "/" + gChannel;
-		getUrl(gURL, undefined).then(function(response) {
-			gJSONdata = JSON.parse(response);
-			ROOTplot();
-			updatePVs();
+	function set_machannel(mod, ch) {
+		url = "http://{{ ipaddress }}:{{ port }}/ma/out/" + mod + "/" + ch;
+		getUrl(url, undefined).then(function (response) {
+			jsdata = JSON.parse(response);
+			if(jsdata["MA_ERROR"] != "") {
+				toastr.error("Command failed:" + jsdata["MA_ERROR"])
+			}
 		});
 	}
 
-        function reset_histogram() {
-        	url = "http://lxconga01.na.infn.it:5000/ma/hreset"
-                getUrl(url, undefined).then(function(response) {
-                	do_refresh();
-	        });
-        }
-
-	function ROOTplot() {
+	function do_refresh() {
 		if (gIsPaused) {
 			return;
 		}
-		histo = JSROOT.CreateTH1(17000);
-		for (var i=0; i<gJSONdata.hvalues.length; i++) {
-	   	   histo.setBinContent(i, gJSONdata.hvalues[i]);
+		ROOTplot();
+		updatePVs();
+		document.getElementById("datetime").innerHTML = Date();
+	}
+
+	function reset_histogram() {
+		url = "http://{{ ipaddress }}:{{ port }}" + "/ma/plot/reset"
+		getUrl(url, undefined).then(function (response) {
+			jsdata = JSON.parse(response);
+			if(jsdata["MA_ERROR"] == "") {
+				toastr.info("Command successful")
+				do_refresh();
+			} else {
+				toastr.error("Command failed:" + jsdata["MA_ERROR"])
+			}
+		});
+	}
+
+	function updateStatus() {
+		if (gJSONdata["rbvalue"]) {
+			document.getElementById("readstatus").style.color = "red";
+		} else {
+			document.getElementById("readstatus").style.color = "green";
 		}
-		histo.fTitle = gJSONdata["htitle"];
-		JSROOT.redraw('graphdiv', histo, "");
+		document.getElementById("readstatus").innerHTML = gJSONdata["rbstatus"];
+	}
+
+	function ROOTplot() {
+		url = "http://{{ ipaddress }}:{{ port }}/ma/plot/data"
+		getUrl(url, undefined).then(function (response) {
+			jsdata = JSON.parse(response);
+			if(jsdata["MA_ERROR"] == "") {
+				histo = JSROOT.CreateTH1(17000);
+				for (var i = 0; i < jsdata.H_VALUES.length; i++) {
+					histo.setBinContent(i, jsdata.H_VALUES[i]);
+				}
+				histo.fTitle = jsdata["H_TITLE"];
+				JSROOT.redraw('graphdiv', histo, "");
+			} else {
+				toastr.error("Command failed:" + jsdata["MA_ERROR"])
+			}
+		});
 	}
 
 	function updatePVs() {
-		document.getElementById("cfdthreshold").innerHTML = gJSONdata.cfdthreshold;
+		url = "http://{{ ipaddress }}:{{ port }}/ma/report"
+		getUrl(url, undefined).then(function (response) {
+			jsdata = JSON.parse(response);
+			if(jsdata["MA_ERROR"] == "") {
+				document.getElementById("cfdthreshold").innerHTML = jsdata["CH_CFD_THRESHOLD"];
+			} else {
+				toastr.error("Command failed:" + jsdata["MA_ERROR"])
+				document.getElementById("cfdthreshold").innerHTML = "ERR";
+			}
+		});
 	}
 
 </script>
@@ -98,7 +145,7 @@
 
 <div class="container-fluid">
 	<div class="row">
-		<div class="col-lg-4">
+		<div class="col-lg-3">
 			<div class="panel panel-default">
 				<div class="panel-heading">Display control</div>
 				<div class="panel-body">
@@ -123,6 +170,7 @@
 						</select>
 					</div>
 					<!-- end well body-->
+					<div><span id="spinner" class="fa fa-cog fa-spin" style="width:100%; font-size:24px; text-align: center"></span></div>
 				</div>
 				<!-- end panel body-->
 			</div>
@@ -154,7 +202,7 @@
 		<!-- end col -->
 
 
-		<div class="col-lg-8">
+		<div class="col-lg-9">
 			<div class="panel panel-default">
 				<div class="panel-heading">Megamp selection</div>
 				<div class="panel-body">
@@ -200,25 +248,18 @@
 				<!-- end panel body -->
 			</div>
 			<!-- end panel -->
-
-			<div class="col-lg-12">
-				<div class="panel panel-default">
-					<div class="panel-heading">Status</div>
-					<div class="panel-body">
-						<h5>
-							<b>Last update: </b>
-							<span id="datetime"></span>
-						</h5>
-						<h5>
-							<b>Read back status: </b>
-							<span id="readstatus"></span>
-						</h5>
-					</div>
-					<!-- end panel body -->
+			<div class="panel panel-default">
+				<div class="panel-heading">Status</div>
+				<div class="panel-body">
+					<h5>
+						<b>Last update: </b>
+						<span id="datetime"></span>
+					</h5>
 				</div>
-				<!-- end panel -->
+				<!-- end panel body -->
 			</div>
-			<!-- end col -->
+			<!-- end panel -->
+
 		</div>
 		<!-- end col -->
 	</div>

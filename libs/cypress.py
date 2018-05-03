@@ -38,15 +38,11 @@ class Cypress():
 
     def open(self, index):
         self.lst = list(usb.core.find(idVendor=0x04b4, idProduct=0x8613, find_all=True))
-
-        try:
-           self.dev = self.lst[index]
-        except Exception as e:
-          print("ERROR: Cypress device not found")
-          sys.exit(1)
-        else:
-           self.dev.set_configuration(1)
-           self.dev.set_interface_altsetting(interface = 0, alternate_setting = 1)
+        self.dev = self.lst[index]
+        
+    def config(self):
+        self.dev.set_configuration(1)
+        self.dev.set_interface_altsetting(interface = 0, alternate_setting = 1)
 
     def busclear(self):
         while True:
