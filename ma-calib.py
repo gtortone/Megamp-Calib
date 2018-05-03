@@ -296,7 +296,7 @@ def hdata():
 
 	jsobj["H_GTIME"] = int(gated_time)
 	jsobj["H_PTIME"] = int(phys_time)
-	if(phys_time > 0):
+	if(int(phys_time) > 0):
 		jsobj["H_DTIME"] = round(100 - ((int(phys_time) - int(gated_time)) / int(phys_time)) * 100, 2)
 	else:
 		jsobj["H_DTIME"] = "-"
