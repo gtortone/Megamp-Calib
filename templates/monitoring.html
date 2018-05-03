@@ -120,6 +120,10 @@
 				}
 				histo.fTitle = jsdata["H_TITLE"];
 				JSROOT.redraw('graphdiv', histo, "");
+				document.getElementById("dead_time").innerHTML = jsdata["H_DTIME"];
+				document.getElementById("time_meas").innerHTML = jsdata["H_TIME"];
+				document.getElementById("num_event").innerHTML = jsdata["H_EVENTS"];
+				document.getElementById("idle_time").innerHTML = jsdata["H_ITIME"];
 			} else {
 				toastr.error("Command failed:" + jsdata["MA_ERROR"])
 			}
@@ -193,6 +197,22 @@
 					<h5>
 						<b>CFD Threshold: </b>
 						<span id="cfdthreshold">-</span> mV
+					</h5>
+					<h5>
+						<b>Dead Time: </b>
+						<span id="dead_time">-</span> 
+					</h5>
+					<h5>
+						<b>Time Measured: </b>
+						<span id="time_meas">-</span> 
+					</h5>
+					<h5>
+						<b>Number of events: </b>
+						<span id="num_event">-</span> 
+					</h5>
+					<h5>
+						<b>Idle Time:: </b>
+						<span id="idle_time">-</span>
 					</h5>
 				</div>
 				<!-- end panel body-->

@@ -281,18 +281,24 @@ def hdata():
 			return(json.dumps(jsobj))
 
 		try:
-			hist = cy.readhist()
+			hist, dead_time, time_meas, num_event, idle_time = cy.readhist()
 		except Exception as e:
 			jsobj["MA_ERROR"] = "USB write error (read histogram)"
 			return(json.dumps(jsobj))
 	else:
 		hist = range(200)
+		dead_time = time_meas = num_event = idle_time = 0
 
+	jsobj["H_TITLE"] = 'Megamp Module #{} - Channel #{}'.format(ms.getModule(),ms.getChannel())
 	jsobj["H_VALUES"] = []
 	for item in hist:
 		jsobj["H_VALUES"].append(item)
 
-	jsobj["H_TITLE"] = 'Megamp Module #{} - Channel #{}'.format(ms.getModule(),ms.getChannel())
+	jsobj["H_DTIME"] = int(dead_time)
+	jsobj["H_TIME"] = int(time_meas)
+	jsobj["H_EVENTS"] = num_event
+	jsobj["H_ITIME"] = int(idle_time)
+
 	return(json.dumps(jsobj))
 
 @app.route('/ma/plot/reset')
@@ -397,7 +403,7 @@ if __name__ == "__main__":
 	signal(SIGHUP, terminate)
 
 	try:
-		app.run(host=netip, port=options.port)
+		app.run(host=netip, port=options.port, threaded=True)
 	except Exception as e:
 		print("E: {}".format(e))
 		cleanup()
