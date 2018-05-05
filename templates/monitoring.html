@@ -1,15 +1,23 @@
 {% extends 'admin/master.html' %} {% block head_css %} {{ super() }}
-<link href="/static/css/toastr.min.css" rel="stylesheet" /> 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="/static/css/toastr.min.css" />
+<link rel="stylesheet" href="/static/css/font-awesome.min.css" />
+<link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
+<style>
+	th,
+	td {
+		padding: 5px;
+	}
+</style>
 {% endblock %} {% block head %} {{ super() }}
 <script src="/static/jsroot/scripts/d3.min.js"></script>
+<script src="/static/js/jquery.min.js" type="text/javascript"></script>
+<script src="/static/js/toastr.min.js" type="text/javascript"></script>
+<script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
 <script src="/static/jsroot/scripts/JSRootCore.js"></script>
 <script src="/static/jsroot/scripts/JSRootPainter.js"></script>
 <script src="/static/jsroot/scripts/JSRootPainter.more.js"></script>
-<script src="/static/js/rootana_functions.js" type="text/javascript"></script>
-<script src="/static/js/jquery.min.js" type="text/javascript"></script>
-<script src="/static/js/toastr.min.js" type="text/javascript"></script>
-{% endblock head %} {% with messages = get_flashed_messages() %} {% if messages %}
+<script src="/static/js/rootana_functions.js" type="text/javascript"></script> {% endblock head %} {% with messages = get_flashed_messages() %} {% if messages %}
+
 <ul class='flashes'>
 	{% for message in messages %}
 	<li>{{ message }}</li>{% endfor %}
@@ -26,20 +34,17 @@
 
 	function init() {
 		set_machannel(gModule, gChannel);
+		histo_setup();
 		do_refresh();
 		gIntervalID = setInterval(do_refresh, gRefresh * 1000);
 	}
 
 	function pause_resume() {
-		if (gIsPaused) {
+		if ($('#pause_button').prop('checked')) {
 			gIsPaused = false;
-			$('#pause_button span:last-child').text(" Pause");
-			document.getElementById("icon01").classList.replace("glyphicon-play", "glyphicon-pause");
 			document.getElementById("spinner").classList.replace("fa-spin-pause", "fa-spin");
 		} else {
 			gIsPaused = true;
-			$('#pause_button span:last-child').text(" Resume");
-			document.getElementById("icon01").classList.replace("glyphicon-pause", "glyphicon-play");
 			document.getElementById("spinner").classList.replace("fa-spin", "fa-spin-pause");
 		}
 	}
@@ -52,9 +57,6 @@
 		var e = document.getElementById("sel_channel");
 		gChannel = e.options[e.selectedIndex].value;
 
-		document.getElementById("module").innerHTML = gModule;
-		document.getElementById("channel").innerHTML = gChannel;
-
 		set_machannel(gModule, gChannel);
 		do_refresh();
 	}
@@ -63,7 +65,6 @@
 		var e = document.getElementById("sel_refresh");
 		gRefresh = e.options[e.selectedIndex].value;
 
-		document.getElementById("refresh").innerHTML = gRefresh;
 		clearInterval(gIntervalID);
 		gIntervalID = setInterval(do_refresh, gRefresh * 1000);
 	}
@@ -72,7 +73,7 @@
 		url = "http://{{ ipaddress }}:{{ port }}/ma/out/" + mod + "/" + ch;
 		getUrl(url, undefined).then(function (response) {
 			jsdata = JSON.parse(response);
-			if(jsdata["MA_ERROR"] != "") {
+			if (jsdata["MA_ERROR"] != "") {
 				toastr.error("Command failed:" + jsdata["MA_ERROR"])
 			}
 		});
@@ -91,7 +92,7 @@
 		url = "http://{{ ipaddress }}:{{ port }}" + "/ma/plot/reset"
 		getUrl(url, undefined).then(function (response) {
 			jsdata = JSON.parse(response);
-			if(jsdata["MA_ERROR"] == "") {
+			if (jsdata["MA_ERROR"] == "") {
 				toastr.info("Command successful")
 				do_refresh();
 			} else {
@@ -113,7 +114,7 @@
 		url = "http://{{ ipaddress }}:{{ port }}/ma/plot/data"
 		getUrl(url, undefined).then(function (response) {
 			jsdata = JSON.parse(response);
-			if(jsdata["MA_ERROR"] == "") {
+			if (jsdata["MA_ERROR"] == "") {
 				histo = JSROOT.CreateTH1(17000);
 				for (var i = 0; i < jsdata.H_VALUES.length; i++) {
 					histo.setBinContent(i, jsdata.H_VALUES[i]);
@@ -133,13 +134,19 @@
 		url = "http://{{ ipaddress }}:{{ port }}/ma/report"
 		getUrl(url, undefined).then(function (response) {
 			jsdata = JSON.parse(response);
-			if(jsdata["MA_ERROR"] == "") {
+			if (jsdata["MA_ERROR"] == "") {
 				document.getElementById("cfdthreshold").innerHTML = jsdata["CH_CFD_THRESHOLD"];
 			} else {
 				toastr.error("Command failed:" + jsdata["MA_ERROR"])
 				document.getElementById("cfdthreshold").innerHTML = "ERR";
 			}
 		});
+	}
+
+	function histo_setup() {
+		console.log($('#hswitch').prop('checked'));
+		console.log($('#input').prop('checked'));
+		console.log($('#filter').prop('checked'));
 	}
 
 </script>
@@ -152,47 +159,77 @@
 			<div class="panel panel-default">
 				<div class="panel-heading">Display control</div>
 				<div class="panel-body">
-					<div class="well well-sm">
-						<button type="button" class="btn btn-primary" id="pause_button" onclick="pause_resume();">
-							<span id="icon01" class="glyphicon glyphicon-pause"> Pause</span>
-						</button>
+					<table>
+						<tr>
+							<th colspan="2">
+								<input id="pause_button" type="checkbox" checked data-toggle="toggle" data-on="<i class='fa fa-play'></i> Play" data-off="<i class='fa fa-pause'></i> Pause"
+								 onchange="pause_resume();">
+							</th>
+						</tr>
+						<tr>
+							<th colspan="2">
+								<button type="button" class="btn btn-primary" id="reset_button" onclick="reset_histogram();">
+									<span class="glyphicon glyphicon-refresh"> Reset histogram</span>
+								</button>
+							</th>
+						</tr>
+						<tr>
+							<td>
+								Refresh
+							</td>
+							<td>
+								<select class="form-control" id="sel_refresh" onclick="select_refresh();">
+									<option value=1>1 second</option>
+									<option value=2>2 seconds</option>
+									<option value=5 selected>5 seconds</option>
+								</select>
+							</td>
+						</tr>
+
+					</table>
+
+
+					<br/>
+					<div>
+						<span id="spinner" class="fa fa-cog fa-spin" style="width:100%; font-size:24px; text-align: center"></span>
 					</div>
-					<!-- end well -->
-					<div class="well well-sm">
-						<button type="button" class="btn btn-primary" id="reset_button" onclick="reset_histogram();">
-							<span class="glyphicon glyphicon-refresh"> Reset histogram</span>
-						</button>
-					</div>
-					<!-- end well -->
-					<div class="well well-sm">
-						<label for="sel_refresh">Refresh period:</label>
-						<select class="form-control" id="sel_refresh" onclick="select_refresh();">
-							<option value=1>1 second</option>
-							<option value=2>2 seconds</option>
-							<option value=5 selected>5 seconds</option>
-						</select>
-					</div>
-					<!-- end well body-->
-					<div><span id="spinner" class="fa fa-cog fa-spin" style="width:100%; font-size:24px; text-align: center"></span></div>
 				</div>
-				<!-- end panel body-->
+				<!-- end panel body -->
 			</div>
 			<!-- end panel -->
 			<div class="panel panel-default">
+				<div class="panel-heading">Histogram input setup</div>
+				<div class="panel-body">
+					<table>
+						<tr>
+							<td>Histogram</td>
+							<td>
+								<input id="hswitch" type="checkbox" checked data-width="100" data-toggle="toggle" data-size="small" data-onstyle="success"
+								 data-offstyle="danger" onchange="histo_setup();">
+							</td>
+						</tr>
+						<tr>
+							<td>Input</td>
+							<td>
+								<input id="input" type="checkbox" checked data-width="100" data-toggle="toggle" data-size="small" data-on="Megamp" data-off="Ext. Lemo"
+								 data-onstyle="success" data-offstyle="warning" onchange="histo_setup();">
+							</td>
+						</tr>
+						<tr>
+							<td>Filter</td>
+							<td>
+								<input id="filter" type="checkbox" checked data-width="100" data-toggle="toggle" data-size="small" data-on="CFD" data-off="Peak Comp."
+								 data-onstyle="success" data-offstyle="warning" onchange="histo_setup();">
+							</td>
+						</tr>
+					</table>
+				</div>
+				<!-- end panel body -->
+			</div>
+			<!-- end panel-->
+			<div class="panel panel-default">
 				<div class="panel-heading">Parameters</div>
 				<div class="panel-body">
-					<h5>
-						<b>Module: </b>
-						<span id="module">0</span>
-					</h5>
-					<h5>
-						<b>Channel: </b>
-						<span id="channel">0</span>
-					</h5>
-					<h5>
-						<b>Plot refresh period: </b>
-						<span id="refresh">5</span> s
-					</h5>
 					<h5>
 						<b>CFD Threshold: </b>
 						<span id="cfdthreshold">-</span> mV
@@ -207,7 +244,7 @@
 					</h5>
 					<h5>
 						<b>Number of events: </b>
-						<span id="num_events">-</span> 
+						<span id="num_events">-</span>
 					</h5>
 				</div>
 				<!-- end panel body-->
@@ -215,7 +252,6 @@
 			<!-- end panel -->
 		</div>
 		<!-- end col -->
-
 
 		<div class="col-lg-9">
 			<div class="panel panel-default">

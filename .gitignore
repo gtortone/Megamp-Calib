@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 venv/
 *.sqlite
+bower_components/
 
 # C extensions
 *.so
