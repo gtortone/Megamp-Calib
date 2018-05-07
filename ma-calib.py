@@ -17,6 +17,7 @@ from signal import signal, SIGINT, SIGTERM, SIGHUP
 
 # internal libs
 from libs.cypress import Cypress, CypressError
+from libs.megampset import MegampSet
 
 # FLASK
 from flask import Flask, request, flash, redirect, url_for
@@ -28,7 +29,6 @@ from flask_admin.actions import action
 from flask_admin.model.template import EndpointLinkRowAction, LinkRowAction
 from sqlalchemy.event import listens_for
 from sqlalchemy import event
-from flask import request
 
 # EPICS
 from epics import PV
@@ -43,7 +43,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + \
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 pvdb = {}			# PV local cache
-fthread = None		# Flask thread
 
 class task_status(enum.Enum):
 		Pending = 1
@@ -163,41 +162,6 @@ class TaskQueue():
 				print("I: terminate calibration tasks...")
 				break
 
-class MegampSet():
-
-	module = 0
-	channel = 0
-	modlist = []
-	
-	def __init__(self):
-		print("I: init MegampSet")
-		self.refresh()
-
-	def refresh(self):
-		pv = PV('MEGAMP:MOD:SEL', connection_timeout=2)
-		self.modlist = pv.enum_strs
-
-	def setModule(self, mod):
-		if mod in self.modlist:
-			self.module = mod
-		else:
-			raise IndexError
-	
-	def getModule(self):
-		return self.module
-
-	def setChannel(self, ch):
-		if (int(ch) >= 0) and (int(ch) <= 15):
-			self.channel = ch
-		else:
-			raise IndexError
-
-	def getChannel(self):
-		return self.channel
-
-	def getModlist(self):
-		return self.modlist
-
 # MAIN
 
 def onChangesPV(pvname=None, value=None, char_value=None, **kw):
@@ -245,7 +209,7 @@ def mareport():
 			jsobj["MA_ERROR"] = "Megamp EPICS IOC error"
 			return(json.dumps(jsobj))
 		else:
-			pv.value = 0	# enable CFD threshold (disable = false)
+			pv.value = 0	# enable CFD threshold (value 0 = true)
 
 		pvname = get_pvname(ms.getModule(), ms.getChannel(), 'CFDThreshold')
 		mareport.pvcfdthr = PV(pvname)
@@ -315,6 +279,25 @@ def hreset():
 			jsobj["MA_ERROR"] = "USB write error (reset histogram)"
 	return json.dumps(jsobj)
 
+@app.route('/ma/writepv', methods=['GET', 'POST'])
+def writepv():
+	jsobj = {}
+	jsobj["MA_ERROR"] = ""
+	pvname = request.form.get("PV_NAME")
+	pvvalue = request.form.get("PV_VALUE")
+	if((pvname is None) or (pvvalue is None) ):
+		jsobj["MA_ERROR"] = "PV write error (parameter missing)"
+		return json.dumps(jsobj)
+
+	pv = PV(pvname)
+	if pv.wait_for_connection(timeout=2) == False:
+		jsobj["MA_ERROR"] = "PV write error (PV not found)"
+		return(json.dumps(jsobj))
+	else:
+		pv.value = pvvalue
+
+	return json.dumps(jsobj)
+
 def get_pvname(module, channel, attribute):
 	pvname = 'MEGAMP:M' + str(module) + ':C' + str(channel) + ':' + str(attribute)
 	return(pvname)
@@ -349,7 +332,7 @@ if not op.exists(database_path):
 
 # create task queue
 tq = TaskQueue()
-# create Megamp slot
+# create Megamp set
 ms = MegampSet()
 
 parser = MAOptionParser()
