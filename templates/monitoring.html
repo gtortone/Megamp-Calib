@@ -1,4 +1,5 @@
-{% extends 'admin/master.html' %} {% block head_css %} {{ super() }}
+{% extends "bootstrap/base.html" %} {% block head %} {% block styles %} {{ super() }}
+<link rel="stylesheet" href="/static/css/jquery-ui.css">
 <link rel="stylesheet" href="/static/css/toastr.min.css" />
 <link rel="stylesheet" href="/static/css/font-awesome.min.css" />
 <link rel="stylesheet" href="/static/css/bootstrap-toggle.min.css" />
@@ -8,21 +9,22 @@
 		padding: 5px;
 	}
 </style>
-{% endblock %} {% block head %} {{ super() }}
+{% endblock %} {% endblock head %} {% block body %} {% block scripts %} {{ super() }}
 <script src="/static/jsroot/scripts/d3.min.js"></script>
-<script src="/static/js/jquery.min.js"></script>
+<script src="/static/js/jquery-ui.js"></script>
 <script src="/static/js/toastr.min.js"></script>
 <script src="/static/js/bootstrap-toggle.min.js"></script>
 <script src="/static/jsroot/scripts/JSRootCore.js"></script>
 <script src="/static/jsroot/scripts/JSRootPainter.js"></script>
 <script src="/static/jsroot/scripts/JSRootPainter.more.js"></script>
-<script src="/static/js/rootana_functions.js"></script> {% endblock head %} {% with messages = get_flashed_messages() %} {% if messages %}
+<script src="/static/js/rootana_functions.js"></script> {% endblock %} {% block navbar %} {{nav.mynavbar.render()}} {% endblock %} {% with messages = get_flashed_messages() %}
+{% if messages %}
 
 <ul class='flashes'>
 	{% for message in messages %}
 	<li>{{ message }}</li>{% endfor %}
 </ul>
-{% endif %} {% endwith %} {% block body %} {{ super() }} {% if not get_flashed_messages() %} 
+{% endif %} {% endwith %} {% if not get_flashed_messages() %}
 
 <script>
 	gIsPaused = false;
@@ -30,24 +32,37 @@
 	gChannel = 0;
 	gRefresh = 5;
 	gIntervalID = 0;
+	var cfd_threshold;
 
 	window.addEventListener("load", init);
 
 	function init() {
+		// CFD threshold spinner
+		cfd_threshold = $("#cfd-spinner").spinner();
+		cfd_threshold.width(50);
+		cfd_threshold.spinner({ min: 0, max: 4095, change: upd_cfdthreshold, start: stop_refresh });
+		//
 		set_machannel(gModule, gChannel);
 		histo_setup();
 		do_refresh();
 		gIntervalID = setInterval(do_refresh, gRefresh * 1000);
 	}
 
+	function start_refresh() {
+		gIsPaused = false;
+		document.getElementById("spinner").classList.replace("fa-spin-pause", "fa-spin");
+	}
+
+	function stop_refresh() {
+		gIsPaused = true;
+		document.getElementById("spinner").classList.replace("fa-spin", "fa-spin-pause");
+	}
+
 	function pause_resume() {
-		if ($('#pause_button').prop('checked')) {
-			gIsPaused = false;
-			document.getElementById("spinner").classList.replace("fa-spin-pause", "fa-spin");
-		} else {
-			gIsPaused = true;
-			document.getElementById("spinner").classList.replace("fa-spin", "fa-spin-pause");
-		}
+		if ($('#pause_button').prop('checked'))
+			start_refresh();
+		else
+			stop_refresh();
 	}
 
 	function select_channel() {
@@ -137,11 +152,31 @@
 			jsdata = JSON.parse(response);
 			if (jsdata["MA_ERROR"] == "") {
 				document.getElementById("cfdthreshold").innerHTML = jsdata["CH_CFD_THRESHOLD"];
+				$("#cfd-spinner").val(jsdata["CH_CFD_THRESHOLD"]);
 			} else {
 				toastr.error("Command failed:" + jsdata["MA_ERROR"])
 				document.getElementById("cfdthreshold").innerHTML = "ERR";
 			}
 		});
+	}
+
+	function writepv(name, value) {
+		url = "/ma/writepv"
+		postdata = new FormData();
+		postdata.append("PV_NAME", name);
+		postdata.append("PV_VALUE", value);
+		getUrl(url, postdata).then(function (response) {
+			jsdata = JSON.parse(response);
+			if (jsdata["MA_ERROR"] == "") {
+				toastr.info("PV write successful");
+			} else {
+				toastr.error(jsdata["MA_ERROR"]);
+			}
+		});
+	}
+
+	function pvname(attr) {
+		return ("MEGAMP:M" + gModule + ":C" + gChannel + ":" + attr);
 	}
 
 	function histo_setup() {
@@ -150,11 +185,20 @@
 		console.log($('#filter').prop('checked'));
 	}
 
+	function upd_cfdthreshold(event, ui) {
+		if (cfd_threshold.spinner("isValid") == false) {
+			cfd_threshold.spinner("value", 0);
+			toastr.error("Value out of range");
+		} else {
+			writepv(pvname("CFDThreshold"), cfd_threshold.spinner("value"));
+			document.getElementById("cfdthreshold").innerHTML = cfd_threshold.spinner("value");
+		}
+		start_refresh();
+	}
+
 </script>
 
-<div id="placeholder"></div>
-
-<div class="container-fluid">
+<div class="container">
 	<div class="row">
 		<div class="col-lg-3">
 			<div class="panel panel-default">
@@ -229,9 +273,9 @@
 				<div class="panel-body">
 					<table>
 						<tr>
-							<td>CFD Threshold</td>
+							<td>CFD Threshold [mV] </td>
 							<td>
-								<input id="spinner" name="value" autocomplete="off" class="ui-spinner-input" role="spinbutton">
+								<input id="cfd-spinner" name="value" autocomplete="off" class="ui-spinner-input" role="spinbutton">
 							</td>
 						</tr>
 

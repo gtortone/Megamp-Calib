@@ -19,11 +19,10 @@ function getUrl(url, postData) {
     var req = new XMLHttpRequest();
 
     if(postData != false){
-      req.open('POST', url);
+      req.open('POST', url, true);
     }else{
       req.open('GET', url);
     }
-
 
     req.onload = function() {
       // This is called even on 404 etc
