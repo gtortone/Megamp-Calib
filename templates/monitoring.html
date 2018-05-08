@@ -182,9 +182,9 @@
 	function histo_setup() {
 		url = "/ma/plot/setup"
 		postdata = new FormData();
-		postdata.append("H_SWITCH", $('#hswitch').prop('checked'));
-		postdata.append("H_FILTER", $('#hfilter').prop('checked'));
-		postdata.append("H_INPUT", $('#hinput').prop('checked'));
+		postdata.append("H_SWITCH", Number($('#hswitch').prop('checked')));
+		postdata.append("H_FILTER", Number($('#hfilter').prop('checked')));
+		postdata.append("H_INPUT", Number($('#hinput').prop('checked')));
 		getUrl(url, postdata).then(function (response) {
 			jsdata = JSON.parse(response);
 			if (jsdata["MA_ERROR"] == "") {
