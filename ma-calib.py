@@ -130,11 +130,11 @@ def hdata():
     jsobj = {}
     jsobj["MA_ERROR"] = ""
     if options.sim is None:
-        try:
-            cy.writemem(0, 7)	 # enable histogram
-        except Exception as e:
-            jsobj["MA_ERROR"] = "USB write error (enable histogram)"
-            return(json.dumps(jsobj))
+        #try:
+        #    cy.writemem(0, 7)	 # enable histogram
+        #except Exception as e:
+        #    jsobj["MA_ERROR"] = "USB write error (enable histogram)"
+        #    return(json.dumps(jsobj))
 
         try:
             cy.writemem(2, 1)	 # generate histogram
@@ -231,7 +231,7 @@ def hsetup():
                 else:
                     regvalue = regvalue | (1 << 2)
         try:
-            cy.writemem(0, revalue)  
+            cy.writemem(0, regvalue)  
         except Exception as e:
             jsobj["MA_ERROR"] = "USB write error (setup histogram)"
 
