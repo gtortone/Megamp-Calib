@@ -43,9 +43,10 @@
 		cfd_threshold.spinner({ min: 0, max: 4095, change: upd_cfdthreshold, start: stop_refresh });
 		//
 		set_machannel(gModule, gChannel);
-		histo_setup();
+		histo_setup(true);
 		do_refresh();
 		gIntervalID = setInterval(do_refresh, gRefresh * 1000);
+		gInit = false;
 	}
 
 	function start_refresh() {
@@ -74,7 +75,8 @@
 		gChannel = e.options[e.selectedIndex].value;
 
 		set_machannel(gModule, gChannel);
-		do_refresh();
+		ROOTplot();
+		updatePVs();
 	}
 
 	function select_refresh() {
@@ -179,7 +181,7 @@
 		return ("MEGAMP:M" + gModule + ":C" + gChannel + ":" + attr);
 	}
 
-	function histo_setup() {
+	function histo_setup(initflag = false) {
 		url = "/ma/plot/setup"
 		postdata = new FormData();
 		postdata.append("H_SWITCH", Number($('#hswitch').prop('checked')));
@@ -187,10 +189,12 @@
 		postdata.append("H_INPUT", Number($('#hinput').prop('checked')));
 		getUrl(url, postdata).then(function (response) {
 			jsdata = JSON.parse(response);
-			if (jsdata["MA_ERROR"] == "") {
-				toastr.info("Command successful");
-			} else {
-				toastr.error(jsdata["MA_ERROR"]);
+			if(initflag === false) {
+				if (jsdata["MA_ERROR"] == "") {
+					toastr.info("Command successful");
+				} else {
+					toastr.error(jsdata["MA_ERROR"]);
+				}
 			}
 		});
 	}
