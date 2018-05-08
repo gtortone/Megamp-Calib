@@ -180,9 +180,19 @@
 	}
 
 	function histo_setup() {
-		console.log($('#hswitch').prop('checked'));
-		console.log($('#input').prop('checked'));
-		console.log($('#filter').prop('checked'));
+		url = "/ma/plot/setup"
+		postdata = new FormData();
+		postdata.append("H_SWITCH", $('#hswitch').prop('checked'));
+		postdata.append("H_FILTER", $('#hfilter').prop('checked'));
+		postdata.append("H_INPUT", $('#hinput').prop('checked'));
+		getUrl(url, postdata).then(function (response) {
+			jsdata = JSON.parse(response);
+			if (jsdata["MA_ERROR"] == "") {
+				toastr.info("Command successful");
+			} else {
+				toastr.error(jsdata["MA_ERROR"]);
+			}
+		});
 	}
 
 	function upd_cfdthreshold(event, ui) {
@@ -251,14 +261,14 @@
 						<tr>
 							<td>Input</td>
 							<td>
-								<input id="input" type="checkbox" checked data-width="100" data-toggle="toggle" data-size="small" data-on="Megamp" data-off="Ext. Lemo"
+								<input id="hinput" type="checkbox" checked data-width="100" data-toggle="toggle" data-size="small" data-on="Megamp" data-off="Ext. Lemo"
 								 data-onstyle="success" data-offstyle="warning" onchange="histo_setup();">
 							</td>
 						</tr>
 						<tr>
 							<td>Filter</td>
 							<td>
-								<input id="filter" type="checkbox" checked data-width="100" data-toggle="toggle" data-size="small" data-on="CFD" data-off="Peak Comp."
+								<input id="hfilter" type="checkbox" checked data-width="100" data-toggle="toggle" data-size="small" data-on="CFD" data-off="Peak Comp."
 								 data-onstyle="success" data-offstyle="warning" onchange="histo_setup();">
 							</td>
 						</tr>
