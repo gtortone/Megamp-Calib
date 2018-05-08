@@ -186,12 +186,11 @@
 	}
 
 	function upd_cfdthreshold(event, ui) {
-		if (cfd_threshold.spinner("isValid") == false) {
-			cfd_threshold.spinner("value", 0);
-			toastr.error("Value out of range");
-		} else {
+		if (cfd_threshold.spinner("isValid") == true) {
 			writepv(pvname("CFDThreshold"), cfd_threshold.spinner("value"));
 			document.getElementById("cfdthreshold").innerHTML = cfd_threshold.spinner("value");
+		} else {
+			toastr.error("Value out of range");
 		}
 		start_refresh();
 	}

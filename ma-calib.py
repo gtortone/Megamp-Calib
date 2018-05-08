@@ -181,6 +181,63 @@ def hreset():
     return json.dumps(jsobj)
 
 
+@app.route('/ma/plot/setup', methods=['GET', 'POST'])
+def hsetup():
+    jsobj = {}
+    jsobj["MA_ERROR"] = ""
+    if options.sim is None:
+        try:
+            regvalue = cy.readmem(0)
+        except Exception as e:
+            jsobj["MA_ERROR"] = "USB write error (setup histogram)"
+            return json.dumps(jsobj)
+        # H_SWITCH
+        hswitch = request.form.get("H_SWITCH")
+        if hswitch is not None:
+            try:
+                hswitch = int(hswitch)
+            except Exception as e:
+                jsobj["MA_ERROR"] = "H_SWITCH wrong format error"
+                return json.dumps(jsobj)
+            else:
+                if(hswitch == 0):
+                    regvalue = regvalue & ~(1)
+                elif(hswitch == 1):
+                    regvalue = regvalue | (1)
+        # H_FILTER
+        hfilter = request.form.get("H_FILTER")
+        if hfilter is not None:
+            try:
+                hfilter = int(hfilter)
+            except Exception as e:
+                jsobj["MA_ERROR"] = "H_FILTER wrong format error"
+                return json.dumps(jsobj)
+            else:
+                if(hfilter == 0):
+                    regvalue = regvalue & ~(1 << 1)
+                else:
+                    regvalue = regvalue | (1 << 1)
+        # H_INPUT
+        hinput = request.form.get("H_INPUT")
+        if hinput is not None:
+            try:
+                hinput = int(hinput)
+            except Exception as e:
+                jsobj["MA_ERROR"] = "H_INPUT wrong format error"
+                return json.dumps(jsobj)
+            else:
+                if(hinput == 0):
+                    regvalue = regvalue & ~(1 << 2)
+                else:
+                    regvalue = regvalue | (1 << 2)
+        try:
+            cy.writemem(0, revalue)  
+        except Exception as e:
+            jsobj["MA_ERROR"] = "USB write error (setup histogram)"
+
+    return json.dumps(jsobj)
+
+
 @app.route('/ma/writepv', methods=['GET', 'POST'])
 def writepv():
     jsobj = {}
