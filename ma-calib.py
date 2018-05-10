@@ -206,7 +206,7 @@ def hsetup():
                     jsobj["MA_ERROR"] = "H_FILTER wrong format error"
                     return json.dumps(jsobj)
                 else:
-                    if(hfilter == 1):
+                    if(hfilter == 0):
                         regvalue = regvalue & ~(1 << 1)
                     else:
                         regvalue = regvalue | (1 << 1)
@@ -228,7 +228,9 @@ def hsetup():
             except Exception as e:
                 jsobj["MA_ERROR"] = "USB write error (setup histogram)"
         elif request.method == 'GET':       # read register
-            jsobj["H_SWITCH"] = regvalue 
+            jsobj["H_SWITCH"] = 1 if (regvalue & 1) else 0
+            jsobj["H_FILTER"] = 1 if ((regvalue & 2) >> 1) else 0
+            jsobj["H_INPUT"] = 1 if ((regvalue & 4) >> 2) else 0
 
     return json.dumps(jsobj)
 
