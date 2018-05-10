@@ -10,21 +10,21 @@
 // stolen from http://www.html5rocks.com/en/tutorials/es6/promises/
 function getUrl(url, postData) {
 
-  if (typeof(postData)==='undefined') postData = false;
+  if (typeof (postData) === 'undefined') postData = false;
 
   // Return a new promise.
-  return new Promise(function(resolve, reject) {
+  return new Promise(function (resolve, reject) {
 
     // Do the usual XHR stuff
     var req = new XMLHttpRequest();
 
-    if(postData != false){
+    if (postData != false) {
       req.open('POST', url, true);
-    }else{
+    } else {
       req.open('GET', url);
     }
 
-    req.onload = function() {
+    req.onload = function () {
       // This is called even on 404 etc
       // so check the status
       if (req.status == 200) {
@@ -39,14 +39,14 @@ function getUrl(url, postData) {
     };
 
     // Handle network errors
-    req.onerror = function() {
+    req.onerror = function () {
       reject("Network Error");
     };
 
     // Make the request
-    if(postData != false){
+    if (postData != false) {
       req.send(postData);
-    }else{
+    } else {
       req.send();
     }
   });
