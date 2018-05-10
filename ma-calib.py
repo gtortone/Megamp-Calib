@@ -177,13 +177,13 @@ def hreset():
 def hsetup():
     jsobj = {}
     jsobj["MA_ERROR"] = ""
-    if options.sim is None:
-        try:
-            regvalue = cy.readmem(0)
-        except Exception as e:
-            jsobj["MA_ERROR"] = "USB write error (setup histogram)"
-            return json.dumps(jsobj)
-        if request.method == 'POST':    # write register
+    if request.method == 'POST':    # write register
+        if options.sim is None:
+            try:
+                regvalue = cy.readmem(0)
+            except Exception as e:
+                jsobj["MA_ERROR"] = "USB write error (setup histogram)"
+                return json.dumps(jsobj)
             # H_SWITCH
             hswitch = request.form.get("H_SWITCH")
             if hswitch is not None:
@@ -227,10 +227,12 @@ def hsetup():
                 cy.writemem(0, regvalue)
             except Exception as e:
                 jsobj["MA_ERROR"] = "USB write error (setup histogram)"
-        elif request.method == 'GET':       # read register
-            jsobj["H_SWITCH"] = 1 if (regvalue & 1) else 0
-            jsobj["H_FILTER"] = 1 if ((regvalue & 2) >> 1) else 0
-            jsobj["H_INPUT"] = 1 if ((regvalue & 4) >> 2) else 0
+    elif request.method == 'GET':       # read register
+        if options.sim is not None:
+            regvalue = 7
+        jsobj["H_SWITCH"] = 1 if (regvalue & 1) else 0
+        jsobj["H_FILTER"] = 1 if ((regvalue & 2) >> 1) else 0
+        jsobj["H_INPUT"] = 1 if ((regvalue & 4) >> 2) else 0
 
     return json.dumps(jsobj)
 

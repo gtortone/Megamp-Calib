@@ -175,20 +175,35 @@
 	}
 
 	function histo_setup(initflag = false) {
-		postdata = new FormData();
-		postdata.append("H_SWITCH", Number($('#hswitch').prop('checked')));
-		postdata.append("H_FILTER", Number($('#hfilter').prop('checked')));
-		postdata.append("H_INPUT", Number($('#hinput').prop('checked')));
-		getUrl("/ma/plot/setup", postdata).then(function (response) {
-			jsdata = JSON.parse(response);
-			if (initflag === false) {
+		if (initflag === true) {
+			getUrl("/ma/plot/setup", undefined).then(function (response) {
+				jsdata = JSON.parse(response);
+				if (jsdata["MA_ERROR"] != "") {
+					toastr.error(jsdata["MA_ERROR"]);
+				} else {
+					$('#hswitch').prop('checked',Boolean(Number(jsdata["H_SWITCH"]))).change()
+					$('#hinput').prop('checked',Boolean(Number(jsdata["H_INPUT"]))).change()
+					$('#hfilter').prop('checked',Boolean(Number(jsdata["H_FILTER"]))).change()
+					// setup event handler
+					$('#hswitch').bind("change", histo_setup)
+					$('#hinput').bind("change", histo_setup)
+					$('#hfilter').bind("change", histo_setup)
+				}
+			})
+		} else {
+			postdata = new FormData();
+			postdata.append("H_SWITCH", Number($('#hswitch').prop('checked')));
+			postdata.append("H_FILTER", Number($('#hfilter').prop('checked')));
+			postdata.append("H_INPUT", Number($('#hinput').prop('checked')));
+			getUrl("/ma/plot/setup", postdata).then(function (response) {
+				jsdata = JSON.parse(response);
 				if (jsdata["MA_ERROR"] == "") {
 					toastr.info("Command successful");
 				} else {
 					toastr.error(jsdata["MA_ERROR"]);
 				}
-			}
-		});
+			});
+		}
 	}
 
 	function upd_cfdthreshold(event, ui) {
@@ -248,21 +263,21 @@
 							<td>Histogram</td>
 							<td>
 								<input id="hswitch" type="checkbox" checked data-width="100" data-toggle="toggle" data-size="small" data-onstyle="success"
-								 data-offstyle="danger" onchange="histo_setup();">
+								 data-offstyle="danger">
 							</td>
 						</tr>
 						<tr>
 							<td>Filter</td>
 							<td>
 								<input id="hfilter" type="checkbox" checked data-width="100" data-toggle="toggle" data-size="small" data-on="Peak Comp." data-off="CFD"
-								 data-onstyle="success" data-offstyle="warning" onchange="histo_setup();">
+								 data-onstyle="success" data-offstyle="warning">
 							</td>
 						</tr>
 						<tr>
 							<td>Input</td>
 							<td>
 								<input id="hinput" type="checkbox" checked data-width="100" data-toggle="toggle" data-size="small" data-on="Megamp" data-off="Ext. Lemo"
-								 data-onstyle="success" data-offstyle="warning" onchange="histo_setup();">
+								 data-onstyle="success" data-offstyle="warning">
 							</td>
 						</tr>
 					</table>
