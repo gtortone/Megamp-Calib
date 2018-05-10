@@ -93,11 +93,14 @@ def maout(module, channel):
 def mareport():
     jsobj = {}
     jsobj["MA_ERROR"] = ""
-    mareport.module = -1
-    mareport.channel = -1
-    mareport.pvcfdthr = 0
+    if not hasattr(mareport, "init"):
+        mareport.init = True
+        mareport.module = -1
+        mareport.channel = -1
+        mareport.pvcfdthr = 0
 
     if mareport.module != ms.getModule() or mareport.channel != ms.getChannel():
+        print("new channel")
         pvname = get_pvname(ms.getModule(), ms.getChannel(), 'CFD')
         pv = PV(pvname)
         if pv.wait_for_connection(timeout=2) == False:
@@ -115,8 +118,8 @@ def mareport():
             pvdb[pvname] = mareport.pvcfdthr.value
             mareport.pvcfdthr.add_callback(onChangesPV)
 
-            mareport.module = ms.getModule()
-            mareport.channel = ms.getChannel()
+        mareport.module = ms.getModule()
+        mareport.channel = ms.getChannel()
 
     jsobj["CH_CFD_THRESHOLD"] = pvdb[get_pvname(
         mareport.module, mareport.channel, 'CFDThreshold')]
@@ -153,7 +156,7 @@ def hdata():
     jsobj["H_PTIME"] = int(phys_time)
     if(int(phys_time) > 0):
         jsobj["H_DTIME"] = round(
-            100 - ((int(phys_time) - int(gated_time)) / int(phys_time)) * 100, 2)
+            ((int(phys_time) - int(gated_time)) / int(phys_time)) * 100, 2)
     else:
         jsobj["H_DTIME"] = "-"
     jsobj["H_EVENTS"] = num_events
@@ -181,49 +184,52 @@ def hsetup():
         except Exception as e:
             jsobj["MA_ERROR"] = "USB write error (setup histogram)"
             return json.dumps(jsobj)
-        # H_SWITCH
-        hswitch = request.form.get("H_SWITCH")
-        if hswitch is not None:
-            try:
-                hswitch = int(hswitch)
-            except Exception as e:
-                jsobj["MA_ERROR"] = "H_SWITCH wrong format error"
-                return json.dumps(jsobj)
-            else:
-                if(hswitch == 0):
-                    regvalue = regvalue & ~(1)
-                elif(hswitch == 1):
-                    regvalue = regvalue | (1)
-        # H_FILTER
-        hfilter = request.form.get("H_FILTER")
-        if hfilter is not None:
-            try:
-                hfilter = int(hfilter)
-            except Exception as e:
-                jsobj["MA_ERROR"] = "H_FILTER wrong format error"
-                return json.dumps(jsobj)
-            else:
-                if(hfilter == 1):
-                    regvalue = regvalue & ~(1 << 1)
+        if request.method == 'POST':    # write register
+            # H_SWITCH
+            hswitch = request.form.get("H_SWITCH")
+            if hswitch is not None:
+                try:
+                    hswitch = int(hswitch)
+                except Exception as e:
+                    jsobj["MA_ERROR"] = "H_SWITCH wrong format error"
+                    return json.dumps(jsobj)
                 else:
-                    regvalue = regvalue | (1 << 1)
-        # H_INPUT
-        hinput = request.form.get("H_INPUT")
-        if hinput is not None:
-            try:
-                hinput = int(hinput)
-            except Exception as e:
-                jsobj["MA_ERROR"] = "H_INPUT wrong format error"
-                return json.dumps(jsobj)
-            else:
-                if(hinput == 0):
-                    regvalue = regvalue & ~(1 << 2)
+                    if(hswitch == 0):
+                        regvalue = regvalue & ~(1)
+                    elif(hswitch == 1):
+                        regvalue = regvalue | (1)
+            # H_FILTER
+            hfilter = request.form.get("H_FILTER")
+            if hfilter is not None:
+                try:
+                    hfilter = int(hfilter)
+                except Exception as e:
+                    jsobj["MA_ERROR"] = "H_FILTER wrong format error"
+                    return json.dumps(jsobj)
                 else:
-                    regvalue = regvalue | (1 << 2)
-        try:
-            cy.writemem(0, regvalue)
-        except Exception as e:
-            jsobj["MA_ERROR"] = "USB write error (setup histogram)"
+                    if(hfilter == 1):
+                        regvalue = regvalue & ~(1 << 1)
+                    else:
+                        regvalue = regvalue | (1 << 1)
+            # H_INPUT
+            hinput = request.form.get("H_INPUT")
+            if hinput is not None:
+                try:
+                    hinput = int(hinput)
+                except Exception as e:
+                    jsobj["MA_ERROR"] = "H_INPUT wrong format error"
+                    return json.dumps(jsobj)
+                else:
+                    if(hinput == 0):
+                        regvalue = regvalue & ~(1 << 2)
+                    else:
+                        regvalue = regvalue | (1 << 2)
+            try:
+                cy.writemem(0, regvalue)
+            except Exception as e:
+                jsobj["MA_ERROR"] = "USB write error (setup histogram)"
+        elif request.method == 'GET':       # read register
+            jsobj["H_SWITCH"] = regvalue 
 
     return json.dumps(jsobj)
 
