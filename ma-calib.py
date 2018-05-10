@@ -44,23 +44,23 @@ nav.init_app(app)
 
 app.config['SECRET_KEY'] = hexlify(urandom(24))
 app.config['BOOTSTRAP_SERVE_LOCAL'] = True
-pvdb = {}			# PV local cache
+pvdb = {}			    # PV local cache
 
-# MAIN
-
+# callbacks
 def onChangesPV(pvname=None, value=None, char_value=None, **kw):
     pvdb[pvname] = value
+
+# MAIN
 
 @app.route('/')
 @app.route('/monitoring')
 def monitoring():
-	ms.refresh()
-	if not ms.getModlist():
-		flash('Megamp EPICS IOC not running or modules not detected - please verify IOC configuration', 'danger')
-	#elif tq.getStatus() == 1:
-	#	flash('Megamp Calibration monitoring page not available - please STOP calibration queue', 'danger')
-	
-	return render_template('monitoring.html', rcs=0, modlist=ms.getModlist(), ipaddress=netip, port=options.port)
+    ms.refresh()
+    if not ms.getModlist():
+        flash('Megamp EPICS IOC not running or modules not detected - please verify IOC configuration', 'danger')
+    # elif tq.getStatus() == 1:
+    #	flash('Megamp Calibration monitoring page not available - please STOP calibration queue', 'danger')
+    return render_template('monitoring.html', rcs=0, modlist=ms.getModlist(), ipaddress=netip, port=options.port)
 
 @app.route('/ma/out/<module>/<channel>')
 def maout(module, channel):
@@ -88,7 +88,6 @@ def maout(module, channel):
         pv.value = 1
 
     return(json.dumps(jsobj))
-
 
 @app.route('/ma/report')
 def mareport():
@@ -124,18 +123,11 @@ def mareport():
 
     return(json.dumps(jsobj))
 
-
 @app.route('/ma/plot/data')
 def hdata():
     jsobj = {}
     jsobj["MA_ERROR"] = ""
     if options.sim is None:
-        #try:
-        #    cy.writemem(0, 7)	 # enable histogram
-        #except Exception as e:
-        #    jsobj["MA_ERROR"] = "USB write error (enable histogram)"
-        #    return(json.dumps(jsobj))
-
         try:
             cy.writemem(2, 1)	 # generate histogram
         except Exception as e:
@@ -168,7 +160,6 @@ def hdata():
 
     return(json.dumps(jsobj))
 
-
 @app.route('/ma/plot/reset')
 def hreset():
     jsobj = {}
@@ -179,7 +170,6 @@ def hreset():
         except Exception as e:
             jsobj["MA_ERROR"] = "USB write error (reset histogram)"
     return json.dumps(jsobj)
-
 
 @app.route('/ma/plot/setup', methods=['GET', 'POST'])
 def hsetup():
@@ -213,7 +203,7 @@ def hsetup():
                 jsobj["MA_ERROR"] = "H_FILTER wrong format error"
                 return json.dumps(jsobj)
             else:
-                if(hfilter == 0):
+                if(hfilter == 1):
                     regvalue = regvalue & ~(1 << 1)
                 else:
                     regvalue = regvalue | (1 << 1)
@@ -231,12 +221,11 @@ def hsetup():
                 else:
                     regvalue = regvalue | (1 << 2)
         try:
-            cy.writemem(0, regvalue)  
+            cy.writemem(0, regvalue)
         except Exception as e:
             jsobj["MA_ERROR"] = "USB write error (setup histogram)"
 
     return json.dumps(jsobj)
-
 
 @app.route('/ma/writepv', methods=['GET', 'POST'])
 def writepv():
@@ -257,29 +246,26 @@ def writepv():
 
     return json.dumps(jsobj)
 
-
 def get_pvname(module, channel, attribute):
     pvname = 'MEGAMP:M' + str(module) + ':C' + \
         str(channel) + ':' + str(attribute)
     return(pvname)
 
-
 def terminate(signum, frame):
     print("I: got termination signal... goodbye !")
     cleanup()
 
-
 def cleanup():
     print("I: start cleanup")
-    #tq.setStatus(3)
+    # tq.setStatus(3)
     exit(1)
-
 
 class MAOptionParser(OptionParser):
     def exit(self, status=0, msg=None):
         if msg:
             print(msg)
         cleanup()
+
 
 # create Megamp set
 ms = MegampSet()
