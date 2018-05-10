@@ -100,7 +100,6 @@ def mareport():
         mareport.pvcfdthr = 0
 
     if mareport.module != ms.getModule() or mareport.channel != ms.getChannel():
-        print("new channel")
         pvname = get_pvname(ms.getModule(), ms.getChannel(), 'CFD')
         pv = PV(pvname)
         if pv.wait_for_connection(timeout=2) == False:
