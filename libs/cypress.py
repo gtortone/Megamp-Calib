@@ -142,8 +142,8 @@ class Cypress():
 		rdhist16 = struct.unpack('H'*count, rdhist8)
 
 		# values with resolution = 10ns	
-		gated_time = (rdhist16[-9] + (rdhist16[-8] << 16) + (rdhist16[-7] << 32)) * 10e-8
-		phys_time = (rdhist16[-6] + (rdhist16[-5] << 16) + (rdhist16[-4] << 32)) * 10e-9		## !!! verify !!!
+		gated_time = (rdhist16[-9] + (rdhist16[-8] << 16) + (rdhist16[-7] << 32)) * 1e-8
+		phys_time = (rdhist16[-6] + (rdhist16[-5] << 16) + (rdhist16[-4] << 32)) * 1e-8
 		num_events = rdhist16[-3] + (rdhist16[-2] << 16)
 
 		# delete element '32768'
