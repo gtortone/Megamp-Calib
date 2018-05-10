@@ -228,7 +228,13 @@ def hsetup():
             except Exception as e:
                 jsobj["MA_ERROR"] = "USB write error (setup histogram)"
     elif request.method == 'GET':       # read register
-        if options.sim is not None:
+        if options.sim is None:
+            try:
+                regvalue = cy.readmem(0)
+            except Exception as e:
+                jsobj["MA_ERROR"] = "USB write error (setup histogram)"
+                return json.dumps(jsobj)
+        else:
             regvalue = 7
         jsobj["H_SWITCH"] = 1 if (regvalue & 1) else 0
         jsobj["H_FILTER"] = 1 if ((regvalue & 2) >> 1) else 0
