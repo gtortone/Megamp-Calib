@@ -46,17 +46,14 @@
 		histo_setup(true);
 		do_refresh();
 		gIntervalID = setInterval(do_refresh, gRefresh * 1000);
-		gInit = false;
 	}
 
 	function start_refresh() {
 		gIsPaused = false;
-		document.getElementById("spinner").classList.replace("fa-spin-pause", "fa-spin");
 	}
 
 	function stop_refresh() {
 		gIsPaused = true;
-		document.getElementById("spinner").classList.replace("fa-spin", "fa-spin-pause");
 	}
 
 	function pause_resume() {
@@ -107,8 +104,7 @@
 	}
 
 	function reset_histogram() {
-		url = "/ma/plot/reset"
-		getUrl(url, undefined).then(function (response) {
+		getUrl("/ma/plot/reset", undefined).then(function (response) {
 			jsdata = JSON.parse(response);
 			if (jsdata["MA_ERROR"] == "") {
 				toastr.info("Command successful")
@@ -129,8 +125,7 @@
 	}
 
 	function ROOTplot() {
-		url = "/ma/plot/data"
-		getUrl(url, undefined).then(function (response) {
+		getUrl("/ma/plot/data", undefined).then(function (response) {
 			jsdata = JSON.parse(response);
 			if (jsdata["MA_ERROR"] == "") {
 				histo = JSROOT.CreateTH1(17000);
@@ -149,8 +144,7 @@
 	}
 
 	function updatePVs() {
-		url = "/ma/report"
-		getUrl(url, undefined).then(function (response) {
+		getUrl("/ma/report", undefined).then(function (response) {
 			jsdata = JSON.parse(response);
 			if (jsdata["MA_ERROR"] == "") {
 				document.getElementById("cfdthreshold").innerHTML = jsdata["CH_CFD_THRESHOLD"];
@@ -163,11 +157,10 @@
 	}
 
 	function writepv(name, value) {
-		url = "/ma/writepv"
 		postdata = new FormData();
 		postdata.append("PV_NAME", name);
 		postdata.append("PV_VALUE", value);
-		getUrl(url, postdata).then(function (response) {
+		getUrl("/ma/writepv", postdata).then(function (response) {
 			jsdata = JSON.parse(response);
 			if (jsdata["MA_ERROR"] == "") {
 				toastr.info("PV write successful");
@@ -182,14 +175,13 @@
 	}
 
 	function histo_setup(initflag = false) {
-		url = "/ma/plot/setup"
 		postdata = new FormData();
 		postdata.append("H_SWITCH", Number($('#hswitch').prop('checked')));
 		postdata.append("H_FILTER", Number($('#hfilter').prop('checked')));
 		postdata.append("H_INPUT", Number($('#hinput').prop('checked')));
-		getUrl(url, postdata).then(function (response) {
+		getUrl("/ma/plot/setup", postdata).then(function (response) {
 			jsdata = JSON.parse(response);
-			if(initflag === false) {
+			if (initflag === false) {
 				if (jsdata["MA_ERROR"] == "") {
 					toastr.info("Command successful");
 				} else {
@@ -244,9 +236,6 @@
 							</td>
 						</tr>
 					</table>
-					<div>
-						<span id="spinner" class="fa fa-cog fa-spin" style="width:100%; font-size:25px; text-align: center"></span>
-					</div>
 				</div>
 				<!-- end panel body -->
 			</div>
